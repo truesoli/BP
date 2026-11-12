@@ -1,0 +1,15 @@
+{
+ "name": "Blood Pressure Log",
+ "short_name": "BP Log",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#f4f3ef",
+ "theme_color": "#f4f3ef",
+ "icons": [
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  }
+ ]
+}

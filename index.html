@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BP Log">
+<title>Blood Pressure Log</title>
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f3ef; --surface:#fcfcfb; --line:#e3e1da; --text:#0b0b0b; --text2:#52514e; --text3:#8a887f;
+  --accent:#1f5fae; --accent-ink:#fff;
+  --sys:#2a78d6; --dia:#eb6834;
+  --good:#1a8f4c; --warn:#b97a00; --serious:#d9622b; --critical:#d03a3a; --low:#6250d6;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --bg:#111110; --surface:#1a1a19; --line:#33332f; --text:#f0efec; --text2:#c3c2b7; --text3:#8f8d84;
+    --accent:#3987e5; --accent-ink:#fff;
+    --sys:#3987e5; --dia:#d95926;
+    --good:#2fb36a; --warn:#d99a1c; --serious:#e87a45; --critical:#e66767; --low:#9085e9;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:16px 14px 48px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:4px 2px 14px}
+h1{font-size:24px;margin:0;letter-spacing:-.02em}
+#sync{font-size:12px;color:var(--text3);text-align:right}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+h2{font-size:14px;font-weight:600;color:var(--text2);margin:0 0 12px}
+.nums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+label small{color:var(--text3)}
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+input:focus{border-color:var(--accent)}
+.nums input{font-size:28px;font-weight:700;text-align:center;padding:12px 4px;font-variant-numeric:tabular-nums}
+.row{margin-top:12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#live{min-height:24px;margin-top:10px;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--text2)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px}
+.primary{width:100%;margin-top:14px;padding:14px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:17px}
+.primary:active{opacity:.85}
+#err{color:var(--critical);font-size:13px;margin-top:8px;min-height:0}
+.tiles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.tile{background:var(--bg);border-radius:12px;padding:10px 8px;text-align:center}
+.tile .k{font-size:12px;color:var(--text2)}
+.tile .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.tile .s{font-size:11px;color:var(--text3);margin-top:2px;display:flex;justify-content:center;align-items:center;gap:4px}
+.seg{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px;margin-bottom:10px}
+.seg button{flex:1;background:transparent;color:var(--text2);padding:7px 0;font-size:13px;border-radius:8px}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--text);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--text2);margin-bottom:4px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+#chartBox{position:relative;touch-action:pan-y}
+#chart{display:block;width:100%}
+#tip{position:absolute;top:0;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 9px;font-size:12px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none}
+#tip b{font-size:14px;font-variant-numeric:tabular-nums}
+.empty{color:var(--text3);font-size:14px;text-align:center;padding:22px 0}
+.day{font-size:12px;color:var(--text3);margin:14px 0 4px;font-weight:600}
+.day:first-child{margin-top:0}
+.rec{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.rec .time{font-size:12px;color:var(--text3);width:42px;flex:none;font-variant-numeric:tabular-nums}
+.rec .bp{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rec .meta{flex:1;min-width:0;font-size:12px;color:var(--text2)}
+.rec .meta .cat{display:flex;align-items:center;gap:5px}
+.rec .meta .note{color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del{background:transparent;color:var(--text3);font-size:13px;padding:8px 6px;flex:none}
+.del.arm{color:var(--critical);font-weight:700}
+.tools{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.tools h2{margin:0}
+.ghost{background:var(--bg);color:var(--text2);font-size:13px;padding:7px 12px;border:1px solid var(--line)}
+footer{font-size:11px;color:var(--text3);line-height:1.6;padding:0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Blood Pressure Log</h1>
+    <div id="sync">Loading…</div>
+  </header>
+
+  <section class="card">
+    <h2>New reading</h2>
+    <form id="form" novalidate>
+      <div class="nums">
+        <div><label for="sys">Systolic <small>mmHg</small></label><input id="sys" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="120" autocomplete="off"></div>
+        <div><label for="dia">Diastolic <small>mmHg</small></label><input id="dia" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="80" autocomplete="off"></div>
+        <div><label for="pulse">Pulse <small>bpm</small></label><input id="pulse" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="70" autocomplete="off"></div>
+      </div>
+      <div id="live"></div>
+      <div class="two row">
+        <div><label for="when">Date &amp; time</label><input id="when" type="datetime-local"></div>
+        <div><label for="note">Note <small>(optional)</small></label><input id="note" maxlength="80" placeholder="e.g. morning, after exercise" autocomplete="off"></div>
+      </div>
+      <div id="err" role="alert"></div>
+      <button class="primary" type="submit">Save</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section class="card">
+    <h2>Trend</h2>
+    <div class="seg" id="range">
+      <button type="button" data-d="7">7 days</button>
+      <button type="button" data-d="30" aria-pressed="true">30 days</button>
+      <button type="button" data-d="90">90 days</button>
+      <button type="button" data-d="0">All</button>
+    </div>
+    <div class="legend"><span><i style="background:var(--sys)"></i>Systolic</span><span><i style="background:var(--dia)"></i>Diastolic</span></div>
+    <div id="chartBox"><svg id="chart" role="img" aria-label="Blood pressure trend chart"></svg><div id="tip"></div></div>
+  </section>
+
+  <section class="card">
+    <div class="tools"><h2>History</h2><button type="button" class="ghost" id="copy">Copy CSV</button></div>
+    <div id="list"></div>
+  </section>
+
+  <footer>
+    Categories follow the ACC/AHA adult blood pressure guideline: Normal &lt;120/80 · Elevated 120–129/&lt;80 · Stage 1 130–139 or 80–89 · Stage 2 ≥140 or ≥90 · Crisis &gt;180 or &gt;120.
+    This is a logging tool for reference and does not replace a diagnosis. If a reading is above 180/120 with chest pain, shortness of breath or vision changes, seek emergency care right away.
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var LS_KEY="bp.v1";
+var $=function(id){return document.getElementById(id)};
+var items=[];            // {id,t,s,d,p,n}
+var rangeDays=30;
+var cloud=null;          // collection ref when cloud storage is active
+var writeChain=Promise.resolve();
+
+/* ---------- classification (ACC/AHA) ---------- */
+function classify(s,d){
+  if(s>180||d>120) return {k:"critical",label:"Hypertensive crisis"};
+  if(s>=140||d>=90) return {k:"critical",label:"Stage 2 hypertension"};
+  if(s>=130||d>=80) return {k:"serious",label:"Stage 1 hypertension"};
+  if(s>=120) return {k:"warn",label:"Elevated"};
+  if(s<90||d<60) return {k:"low",label:"Low"};
+  return {k:"good",label:"Normal"};
+}
+function dot(k){var i=document.createElement("span");i.className="dot";i.style.background="var(--"+k+")";return i}
+
+/* ---------- storage ---------- */
+function loadLocal(){try{var a=JSON.parse(localStorage.getItem(LS_KEY)||"[]");return Array.isArray(a)?a.filter(valid):[]}catch(e){return[]}}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(items))}catch(e){}}
+function valid(r){return r&&typeof r.id==="string"&&isFinite(r.t)&&isFinite(r.s)&&isFinite(r.d)}
+function yearOf(t){return new Date(t).getFullYear()}
+function sortItems(){items.sort(function(a,b){return b.t-a.t})}
+function setSync(t){$("sync").textContent=t}
+
+function pushYears(years){
+  if(!cloud) return;
+  years.forEach(function(y){
+    var rows=items.filter(function(r){return yearOf(r.t)===y});
+    var ref=cloud.doc("bp-"+y);
+    writeChain=writeChain.then(function(){
+      return rows.length?ref.set({items:rows}):ref.delete();
+    }).then(function(){setSync("Saved to your account")},function(){setSync("Save failed · kept on this device only")});
+  });
+}
+function persist(years){saveLocal();pushYears(years)}
+
+function initCloud(tries){
+  var c=window.claude;
+  if(!c||typeof c.use!=="function"){
+    if(tries>0) return setTimeout(function(){initCloud(tries-1)},400);
+    return setSync("Saved on this device");
+  }
+  var timer=setTimeout(function(){setSync("Saved on this device")},10000);
+  Promise.all([c.use("db"),c.use("user")]).then(function(r){
+    var db=r[0],user=r[1];
+    if(!db||!user) throw 0;
+    return user.id().then(function(uid){
+      if(!uid) throw 0;
+      var col=db.collection("data/users/"+uid);
+      return col.get().then(function(snap){
+        var remote=[];
+        snap.docs.forEach(function(doc){
+          if(doc.id.indexOf("bp-")!==0) return;
+          var b=doc.data();
+          if(b&&Array.isArray(b.items)) b.items.forEach(function(x){if(valid(x)) remote.push({id:x.id,t:x.t,s:x.s,d:x.d,p:x.p==null?null:x.p,n:x.n||""})});
+        });
+        clearTimeout(timer);
+        cloud=col;
+        // merge: anything saved on this device but not yet in the account is uploaded
+        var seen={};remote.forEach(function(x){seen[x.id]=1});
+        var extra=items.filter(function(x){return !seen[x.id]});
+        items=remote.concat(extra);sortItems();saveLocal();render();
+        if(extra.length){
+          var ys={};extra.forEach(function(x){ys[yearOf(x.t)]=1});
+          pushYears(Object.keys(ys).map(Number));
+        } else setSync("Saved to your account");
+      });
+    });
+  }).catch(function(){clearTimeout(timer);setSync("Saved on this device")});
+}
+
+/* ---------- form ---------- */
+function pad(n){return n<10?"0"+n:""+n}
+function toLocalInput(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
+function num(id){var v=$(id).value.trim();return v===""?null:Number(v)}
+function resetWhen(){$("when").value=toLocalInput(new Date())}
+
+function liveUpdate(){
+  var s=num("sys"),d=num("dia"),el=$("live");el.textContent="";
+  if(s&&d&&s>=50&&d>=30&&s>d){var c=classify(s,d);el.appendChild(dot(c.k));el.appendChild(document.createTextNode(c.label))}
+}
+["sys","dia"].forEach(function(id){$(id).addEventListener("input",function(){
+  liveUpdate();
+  if(id==="sys"&&$(id).value.length===3) $("dia").focus();
+})});
+
+$("form").addEventListener("submit",function(e){
+  e.preventDefault();
+  var s=num("sys"),d=num("dia"),p=num("pulse"),err=$("err");err.textContent="";
+  if(s===null||d===null) return err.textContent="Enter both systolic and diastolic.";
+  if(!Number.isInteger(s)||!Number.isInteger(d)||s<50||s>300||d<30||d>200) return err.textContent="Check the values (systolic 50–300, diastolic 30–200).";
+  if(s<=d) return err.textContent="Systolic must be higher than diastolic.";
+  if(p!==null&&(!Number.isInteger(p)||p<20||p>250)) return err.textContent="Check the pulse (20–250).";
+  var t=new Date($("when").value).getTime();
+  if(!isFinite(t)) t=Date.now();
+  if(t>Date.now()+60000) return err.textContent="The date and time is in the future.";
+  var rec={id:t.toString(36)+Math.random().toString(36).slice(2,8),t:t,s:s,d:d,p:p,n:$("note").value.trim()};
+  items.push(rec);sortItems();persist([yearOf(t)]);
+  $("sys").value="";$("dia").value="";$("pulse").value="";$("note").value="";$("live").textContent="";resetWhen();
+  render();
+});
+
+/* ---------- summary ---------- */
+function avg(days){
+  var from=Date.now()-days*864e5,rows=items.filter(function(r){return r.t>=from});
+  if(!rows.length) return null;
+  var s=0,d=0;rows.forEach(function(r){s+=r.s;d+=r.d});
+  return {s:Math.round(s/rows.length),d:Math.round(d/rows.length),n:rows.length};
+}
+function tile(k,v,sub,cat){
+  var t=document.createElement("div");t.className="tile";
+  var a=document.createElement("div");a.className="k";a.textContent=k;
+  var b=document.createElement("div");b.className="v";b.textContent=v;
+  var c=document.createElement("div");c.className="s";
+  if(cat) c.appendChild(dot(cat.k));
+  c.appendChild(document.createTextNode(sub));
+  t.appendChild(a);t.appendChild(b);t.appendChild(c);return t;
+}
+function renderTiles(){
+  var box=$("tiles");box.textContent="";
+  var last=items[0],a7=avg(7),a30=avg(30);
+  box.appendChild(last?tile("Latest",last.s+"/"+last.d,classify(last.s,last.d).label,classify(last.s,last.d)):tile("Latest","–","No data"));
+  box.appendChild(a7?tile("7-day avg",a7.s+"/"+a7.d,a7.n+(a7.n===1?" reading":" readings"),classify(a7.s,a7.d)):tile("7-day avg","–","No data"));
+  box.appendChild(a30?tile("30-day avg",a30.s+"/"+a30.d,a30.n+(a30.n===1?" reading":" readings"),classify(a30.s,a30.d)):tile("30-day avg","–","No data"));
+}
+
+/* ---------- chart ---------- */
+var NS="http://www.w3.org/2000/svg",chartPts=[],chartGeo=null;
+function el(n,a,txt){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e}
+function fmtDay(t){var d=new Date(t);return (d.getMonth()+1)+"/"+d.getDate()}
+function fmtTime(t){var d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes())}
+function renderChart(){
+  var svg=$("chart"),box=$("chartBox");svg.textContent="";$("tip").style.display="none";
+  var from=rangeDays?Date.now()-rangeDays*864e5:-Infinity;
+  var rows=items.filter(function(r){return r.t>=from}).slice().reverse();
+  chartPts=rows;
+  var W=Math.max(260,box.clientWidth||320),H=220,L=32,R=30,T=12,B=24;
+  svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.setAttribute("height",H);
+  if(!rows.length){
+    svg.appendChild(el("text",{x:W/2,y:H/2,"text-anchor":"middle","font-size":14,fill:"var(--text3)"},"No readings in this period"));
+    chartGeo=null;return;
+  }
+  var lo=Infinity,hi=-Infinity;
+  rows.forEach(function(r){lo=Math.min(lo,r.d);hi=Math.max(hi,r.s)});
+  lo=Math.floor((Math.min(lo,75)-5)/10)*10;hi=Math.ceil((Math.max(hi,135)+5)/10)*10;
+  var t0=rows[0].t,t1=rows[rows.length-1].t;
+  if(t1-t0<36e5){t0-=18e5;t1+=18e5}
+  var X=function(t){return L+(t-t0)/(t1-t0)*(W-L-R)},Y=function(v){return T+(hi-v)/(hi-lo)*(H-T-B)};
+  var step=(hi-lo)>80?20:10;
+  for(var v=lo;v<=hi;v+=step){
+    svg.appendChild(el("line",{x1:L,x2:W-R,y1:Y(v),y2:Y(v),stroke:"var(--line)","stroke-width":1}));
+    svg.appendChild(el("text",{x:L-6,y:Y(v)+4,"text-anchor":"end","font-size":11,fill:"var(--text3)"},v));
+  }
+  [[130,"130"],[80,"80"]].forEach(function(g){
+    svg.appendChild(el("line",{x1:L,x2:W-R,y1:Y(g[0]),y2:Y(g[0]),stroke:"var(--text3)","stroke-width":1,"stroke-dasharray":"3 4"}));
+  });
+  var ticks=Math.min(4,rows.length>1?4:1);
+  for(var i=0;i<ticks;i++){
+    var tt=ticks===1?(t0+t1)/2:t0+(t1-t0)*i/(ticks-1);
+    svg.appendChild(el("text",{x:X(tt),y:H-6,"text-anchor":i===0&&ticks>1?"start":i===ticks-1&&ticks>1?"end":"middle","font-size":11,fill:"var(--text3)"},fmtDay(tt)));
+  }
+  [["s","var(--sys)"],["d","var(--dia)"]].forEach(function(sr){
+    var path=rows.map(function(r,i){return (i?"L":"M")+X(r.t).toFixed(1)+" "+Y(r[sr[0]]).toFixed(1)}).join("");
+    svg.appendChild(el("path",{d:path,fill:"none",stroke:sr[1],"stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+    if(rows.length<=45) rows.forEach(function(r){
+      svg.appendChild(el("circle",{cx:X(r.t),cy:Y(r[sr[0]]),r:rows.length<=20?4:3,fill:sr[1],stroke:"var(--surface)","stroke-width":2}));
+    });
+    var lastR=rows[rows.length-1];
+    svg.appendChild(el("text",{x:W-R+6,y:Y(lastR[sr[0]])+4,"font-size":12,"font-weight":700,fill:"var(--text)"},lastR[sr[0]]));
+  });
+  var cross=el("line",{id:"cross",y1:T,y2:H-B,stroke:"var(--text3)","stroke-width":1,visibility:"hidden"});
+  svg.appendChild(cross);
+  chartGeo={X:X,W:W,cross:cross};
+}
+function chartHover(ev){
+  if(!chartGeo||!chartPts.length) return;
+  var box=$("chartBox"),rect=box.getBoundingClientRect(),px=ev.clientX-rect.left;
+  var best=null,bd=Infinity;
+  chartPts.forEach(function(r){var dx=Math.abs(chartGeo.X(r.t)-px);if(dx<bd){bd=dx;best=r}});
+  var x=chartGeo.X(best.t),tip=$("tip");
+  chartGeo.cross.setAttribute("x1",x);chartGeo.cross.setAttribute("x2",x);chartGeo.cross.setAttribute("visibility","visible");
+  tip.textContent="";
+  var b=document.createElement("b");b.textContent=best.s+"/"+best.d;tip.appendChild(b);
+  tip.appendChild(document.createTextNode(best.p?"  ·  pulse "+best.p:""));
+  tip.appendChild(document.createElement("br"));
+  tip.appendChild(document.createTextNode(fmtDay(best.t)+" "+fmtTime(best.t)+" · "+classify(best.s,best.d).label));
+  tip.style.display="block";
+  var tw=tip.offsetWidth,left=Math.min(Math.max(0,x-tw/2),rect.width-tw);
+  tip.style.left=left+"px";
+}
+function chartLeave(){if(chartGeo) chartGeo.cross.setAttribute("visibility","hidden");$("tip").style.display="none"}
+$("chartBox").addEventListener("pointermove",chartHover);
+$("chartBox").addEventListener("pointerdown",chartHover);
+$("chartBox").addEventListener("pointerleave",chartLeave);
+
+$("range").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b) return;
+  rangeDays=Number(b.dataset.d);
+  Array.prototype.forEach.call(this.children,function(c){c.setAttribute("aria-pressed",c===b?"true":"false")});
+  renderChart();
+});
+Array.prototype.forEach.call($("range").children,function(c){if(!c.hasAttribute("aria-pressed")) c.setAttribute("aria-pressed","false")});
+
+/* ---------- list ---------- */
+var DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function renderList(){
+  var box=$("list");box.textContent="";
+  if(!items.length){var e=document.createElement("div");e.className="empty";e.textContent="No readings yet. Save your first one above.";box.appendChild(e);return}
+  var cur="";
+  items.forEach(function(r){
+    var d=new Date(r.t),key=DOW[d.getDay()]+", "+MON[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+    if(key!==cur){cur=key;var h=document.createElement("div");h.className="day";h.textContent=key;box.appendChild(h)}
+    var row=document.createElement("div");row.className="rec";
+    var tm=document.createElement("div");tm.className="time";tm.textContent=fmtTime(r.t);
+    var bp=document.createElement("div");bp.className="bp";bp.textContent=r.s+"/"+r.d;
+    var meta=document.createElement("div");meta.className="meta";
+    var c=classify(r.s,r.d),cat=document.createElement("div");cat.className="cat";
+    cat.appendChild(dot(c.k));cat.appendChild(document.createTextNode(c.label+(r.p?" · pulse "+r.p:"")));
+    meta.appendChild(cat);
+    if(r.n){var n=document.createElement("div");n.className="note";n.textContent=r.n;meta.appendChild(n)}
+    var del=document.createElement("button");del.type="button";del.className="del";del.textContent="Delete";
+    del.addEventListener("click",function(){
+      if(!del.classList.contains("arm")){
+        del.classList.add("arm");del.textContent="Confirm";
+        setTimeout(function(){del.classList.remove("arm");del.textContent="Delete"},3000);return;
+      }
+      items=items.filter(function(x){return x.id!==r.id});persist([yearOf(r.t)]);render();
+    });
+    row.appendChild(tm);row.appendChild(bp);row.appendChild(meta);row.appendChild(del);box.appendChild(row);
+  });
+}
+
+/* ---------- export ---------- */
+$("copy").addEventListener("click",function(){
+  var btn=this,lines=["Date,Time,Systolic,Diastolic,Pulse,Category,Note"];
+  items.forEach(function(r){
+    var d=new Date(r.t);
+    lines.push([d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),fmtTime(r.t),r.s,r.d,r.p==null?"":r.p,classify(r.s,r.d).label,'"'+(r.n||"").replace(/"/g,'""')+'"'].join(","));
+  });
+  var done=function(ok){btn.textContent=ok?"Copied":"Copy failed";setTimeout(function(){btn.textContent="Copy CSV"},1800)};
+  try{navigator.clipboard.writeText(lines.join("\n")).then(function(){done(true)},function(){done(false)})}catch(e){done(false)}
+});
+
+function render(){renderTiles();renderChart();renderList()}
+var rz;window.addEventListener("resize",function(){clearTimeout(rz);rz=setTimeout(renderChart,150)});
+
+items=loadLocal();sortItems();resetWhen();render();
+initCloud(5);
+})();
+</script>
+</body>
+</html>
